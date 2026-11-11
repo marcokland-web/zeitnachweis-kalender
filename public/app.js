@@ -48,6 +48,8 @@
     setupOffline: ["Der Server ist gerade nicht erreichbar. Foto-Erkennung und Google Kalender gehen erst wieder mit Verbindung.", "The server cannot be reached right now. Photo recognition and Google Calendar need a connection."],
     photoTitle: ["Foto", "Photo"],
     zoom: ["Vergrößern", "Enlarge"],
+    smaller: ["Kleiner", "Smaller"],
+    larger: ["Größer", "Larger"],
     pickPhoto: ["Foto auswählen oder aufnehmen", "Choose or take a photo"],
     otherPhoto: ["Anderes Foto wählen", "Choose another photo"],
     detect: ["Schichten erkennen", "Read shifts"],
@@ -294,6 +296,9 @@
     $("lang").setAttribute("aria-label", t("language"));
     $("thumb").alt = t("photoTitle");
     $("viewer-img").alt = t("photoTitle");
+    $("viewer").setAttribute("aria-label", t("photoTitle"));
+    $("zoom-out").setAttribute("aria-label", t("smaller"));
+    $("zoom-in").setAttribute("aria-label", t("larger"));
     if (state.file) $("photo-label").textContent = t("otherPhoto");
     $("st-build").textContent = t("version", { v: BUILD });
     renderSetupNote(); renderTarget(); renderCalSelect(null);
@@ -348,24 +353,32 @@
     renderSummary();
   });
 
-  var zoom = 1, vs = $("viewer-scroll"), vimg = $("viewer-img");
+  var zoom = 1, base = 1, vs = $("viewer-scroll"), vimg = $("viewer-img");
+  // Bei 100 % ist das ganze Foto zu sehen: volle Breite, außer es wäre dann höher als der Bildschirm
+  function fitBase() {
+    base = vimg.naturalWidth && vs.clientWidth ? Math.min(1, (vs.clientHeight * vimg.naturalWidth / vimg.naturalHeight) / vs.clientWidth) : 1;
+    vimg.style.width = (zoom * base * 100) + "%";
+  }
+  vimg.addEventListener("load", fitBase);
+  window.addEventListener("resize", function () { if (!$("viewer").hidden) fitBase(); });
   function setZoom(z, cx, cy) {
     z = Math.max(1, Math.min(6, z));
     if (cx == null) { cx = vs.clientWidth / 2; cy = vs.clientHeight / 2; }
     var fx = (vs.scrollLeft + cx) / zoom, fy = (vs.scrollTop + cy) / zoom;
     zoom = z;
-    vimg.style.width = (zoom * 100) + "%";
+    vimg.style.width = (zoom * base * 100) + "%";
     vs.scrollLeft = fx * zoom - cx;
     vs.scrollTop = fy * zoom - cy;
     $("zoom-val").textContent = Math.round(zoom * 100) + " %";
+    $("zoom-out").disabled = zoom <= 1;
+    $("zoom-in").disabled = zoom >= 6;
   }
   function closeViewer() { $("viewer").hidden = true; $("thumb-btn").focus(); }
   $("thumb-btn").addEventListener("click", function () {
     if (!thumbUrl) return;
     vimg.src = thumbUrl;
     $("viewer").hidden = false;
-    zoom = 1; vimg.style.width = "100%"; vs.scrollLeft = 0; vs.scrollTop = 0;
-    $("zoom-val").textContent = "100 %";
+    zoom = 1; fitBase(); setZoom(1); vs.scrollLeft = 0; vs.scrollTop = 0;
     $("viewer-close").focus();
   });
   $("viewer-close").addEventListener("click", closeViewer);
