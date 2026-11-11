@@ -1,5 +1,5 @@
 // Service Worker: hält die App-Hülle für den Start ohne Netz bereit. Netz zuerst, Ablage nur als Rückfall.
-const CACHE = "zeitnachweis-2026-11-11.1";
+const CACHE = "zeitnachweis-2026-11-11.2";
 const SHELL = ["./", "style.css", "app.js", "early.js", "manifest.webmanifest?v=1", "icons/icon.svg?v=1", "icons/icon-192.png?v=1"];
 
 self.addEventListener("install", (e) => {

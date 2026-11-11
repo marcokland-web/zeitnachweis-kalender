@@ -26,7 +26,7 @@ Web-App des Familien-App-Studios: Aus einem Foto vom Zeitnachweis werden Kalende
 | `GOOGLE_CLIENT_ID` | OAuth-Client-ID (Typ „Webanwendung“) aus der Google Cloud Console |
 | `ALLOWED_EMAILS` | freigeschaltete Google-Konten, durch Komma getrennt |
 | `GEMINI_API_KEY` | Schlüssel aus Google AI Studio (geheim; bei Vercel als „Sensitive“ und nur für Production) |
-| `GEMINI_MODEL` | optional, Standard `gemini-2.5-flash` |
+| `GEMINI_MODEL` | optional; ohne Angabe probiert die App die aktuellen Flash-Modelle der Reihe nach |
 
 Ohne `GOOGLE_CLIENT_ID` und `ALLOWED_EMAILS` läuft die App ohne Anmeldung: Schichten von Hand und Kalenderdatei gehen, Foto-Erkennung und Google Kalender sind aus.
 

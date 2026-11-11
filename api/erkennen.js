@@ -7,6 +7,7 @@ const { normalize } = require("../lib/eintraege");
 
 const MIME = ["image/jpeg", "image/png", "image/webp"];
 const MAX_B64 = 4 * 1024 * 1024; // unter der Vercel-Grenze von 4,5 MB je Anfrage
+const MODELS = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
 
 const PROMPT = [
   "Auf dem Bild ist ein deutscher „Zeitnachweis“ (Arbeitszeitnachweis), als Ausdruck oder vom Bildschirm abfotografiert.",
@@ -50,20 +51,27 @@ module.exports = async function handler(req, res) {
   if (!MIME.includes(mime) || !bild || !/^[A-Za-z0-9+/]+=*$/.test(bild.slice(0, 2000))) return res.status(400).json({ fehler: "bild" });
   if (bild.length > MAX_B64) return res.status(413).json({ fehler: "zu_gross" });
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  // Google nimmt Modelle regelmäßig aus dem Angebot: gibt es eins nicht mehr (404), wird das nächste versucht
+  const models = [process.env.GEMINI_MODEL, ...MODELS].filter((m, i, all) => m && all.indexOf(m) === i);
+  const payload = JSON.stringify({
+    contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime, data: bild } }, { text: PROMPT }] }],
+    generationConfig: { temperature: 0, responseMimeType: "application/json" },
+  });
+  const deadline = AbortSignal.timeout(50000);
   let r;
-  try {
-    r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime, data: bild } }, { text: PROMPT }] }],
-        generationConfig: { temperature: 0, responseMimeType: "application/json" },
-      }),
-      signal: AbortSignal.timeout(50000),
-    });
-  } catch (e) {
-    return res.status(502).json({ fehler: "dienst" });
+  for (const model of models) {
+    try {
+      r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: payload,
+        signal: deadline,
+      });
+    } catch (e) {
+      return res.status(502).json({ fehler: "dienst" });
+    }
+    if (r.status !== 404) break;
+    console.error("Gemini-Modell nicht verfügbar:", model);
   }
   if (r.status === 429) return res.status(429).json({ fehler: "limit" });
   if (!r.ok) {

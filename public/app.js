@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var BUILD = "2026-11-11.1";
+  var BUILD = "2026-11-11.2";
   var SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"];
   var $ = function (id) { return document.getElementById(id); };
 
