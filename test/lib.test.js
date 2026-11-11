@@ -40,6 +40,8 @@ test("Übergabe: Unsinn wird abgelehnt", () => {
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-02-30", "08:00", "12:00", 0, null]] })));
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "25:00", "12:00", 0, null]] })));
   assert.throws(() => decodePayload(b64({ s: ["A\r\nBEGIN:VEVENT"], e: [["2026-12-01", "08:00", "12:00", 5, null]] })));
+  assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "08:00", "12:00", "constructor", null]] })));
+  assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "08:00", "12:00", 0, 7]] })));
   assert.throws(() => decodePayload(b64({ s: ["A"], e: new Array(121).fill(["2026-12-01", "08:00", "12:00", 0, null]) })));
 });
 
@@ -62,10 +64,13 @@ test("Erkennung: ordnet, entfernt Doppelte und Ungültiges", () => {
     { datum: "2026-12-01", art: "Lernzeit (final)", von: "14:00", bis: "16:00" },
     { datum: "2026-12-04", art: "Anwesenheitszeit (Plan)", von: "8:00", bis: "12:00" },
     { datum: "2026-12-05", art: "x", von: "4,08", bis: "0,25" },
+    { datum: "2026-12-09", art: "<img src=x> Max Muster", von: "08:00", bis: "12:00" },
     { datum: "05.12.2026", art: "x", von: "08:00", bis: "12:00" },
     null, "x",
   ] });
-  assert.deepStrictEqual(out.map((e) => e.datum + " " + e.von + "-" + e.bis), ["2026-12-01 14:00-16:00", "2026-12-04 08:00-12:00", "2026-12-08 16:00-20:05"]);
+  assert.deepStrictEqual(out.map((e) => e.datum + " " + e.von + "-" + e.bis), ["2026-12-01 14:00-16:00", "2026-12-04 08:00-12:00", "2026-12-08 16:00-20:05", "2026-12-09 08:00-12:00"]);
+  assert.strictEqual(out[3].art, "");
+  assert.strictEqual(out[1].art, "Anwesenheitszeit");
   assert.strictEqual(out[0].art, "Lernzeit");
   assert.strictEqual(out[0].unsicher, true);
   assert.deepStrictEqual(normalize(null), []);
@@ -75,9 +80,9 @@ test("Anmeldung: Freigabeliste und Token-Prüfung", async () => {
   process.env.GOOGLE_CLIENT_ID = "client-1";
   process.env.ALLOWED_EMAILS = "Eins@Example.com, zwei@example.com";
   assert.deepStrictEqual(allowedEmails(), ["eins@example.com", "zwei@example.com"]);
-  const token = "a".repeat(40);
-  const req = { headers: { authorization: "Bearer " + token } };
   const good = { aud: "client-1", iss: "https://accounts.google.com", exp: String(Math.floor(Date.now() / 1000) + 600), email_verified: "true", email: "EINS@example.com" };
+  const jwt = (claims) => "x".repeat(10) + "." + Buffer.from(JSON.stringify(claims)).toString("base64url") + "." + "y".repeat(20);
+  const req = { headers: { authorization: "Bearer " + jwt(good) } };
   const fake = (info, ok = true) => async () => ({ ok, json: async () => info });
   assert.deepStrictEqual(await checkUser(req, fake(good)), { status: "ok", email: "eins@example.com" });
   assert.strictEqual((await checkUser(req, fake({ ...good, email: "fremd@example.com" }))).status, "forbidden");
@@ -85,6 +90,14 @@ test("Anmeldung: Freigabeliste und Token-Prüfung", async () => {
   assert.strictEqual((await checkUser(req, fake({ ...good, exp: "1" }))).status, "invalid");
   assert.strictEqual((await checkUser(req, fake({ ...good, email_verified: "false" }))).status, "invalid");
   assert.strictEqual((await checkUser(req, fake(good, false))).status, "invalid");
+  assert.strictEqual((await checkUser(req, fake(null))).status, "invalid");
+  // Offensichtlich falsche Tokens lösen keinen Abruf bei Google aus
+  let calls = 0;
+  const counting = async () => { calls++; return { ok: true, json: async () => good }; };
+  assert.strictEqual((await checkUser({ headers: { authorization: "Bearer " + "a".repeat(40) } }, counting)).status, "invalid");
+  assert.strictEqual((await checkUser({ headers: { authorization: "Bearer " + jwt({ ...good, aud: "fremd" }) } }, counting)).status, "invalid");
+  assert.strictEqual((await checkUser({ headers: { authorization: "Bearer " + jwt({ ...good, exp: "1" }) } }, counting)).status, "invalid");
+  assert.strictEqual(calls, 0);
   assert.strictEqual((await checkUser({ headers: {} }, fake(good))).status, "none");
   assert.strictEqual(bearer({ headers: { authorization: "Basic abc" } }), "");
   delete process.env.ALLOWED_EMAILS;

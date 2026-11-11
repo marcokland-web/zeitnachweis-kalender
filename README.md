@@ -13,7 +13,7 @@ Web-App des Familien-App-Studios: Aus einem Foto vom Zeitnachweis werden Kalende
 - `public/`: die App (HTML, CSS, JavaScript ohne Build-Schritt), Manifest, Service Worker, Icons
 - `api/config.js`: öffentliche Einstellungen und Kontoprüfung
 - `api/erkennen.js`: liest die Schichten aus dem Foto (Google Gemini), nur für angemeldete, freigeschaltete Konten
-- `api/ics.js`: liefert die geprüften Schichten als Kalenderdatei; gespeichert wird nichts
+- `api/ics.js`: liefert die geprüften Schichten als Kalenderdatei; die App speichert sie nicht, sie stehen aber in der Adresse (Browser-Verlauf, Zugriffsprotokoll)
 - `lib/`: gemeinsame Logik (Kalenderdatei, Prüfung der Erkennung, Anmeldung)
 - `brand/`: Quell-SVGs des App-Icons
 - `test/`: Unit-Tests (`npm test`)
@@ -25,7 +25,7 @@ Web-App des Familien-App-Studios: Aus einem Foto vom Zeitnachweis werden Kalende
 |---|---|
 | `GOOGLE_CLIENT_ID` | OAuth-Client-ID (Typ „Webanwendung“) aus der Google Cloud Console |
 | `ALLOWED_EMAILS` | freigeschaltete Google-Konten, durch Komma getrennt |
-| `GEMINI_API_KEY` | Schlüssel aus Google AI Studio (geheim) |
+| `GEMINI_API_KEY` | Schlüssel aus Google AI Studio (geheim; bei Vercel als „Sensitive“ und nur für Production) |
 | `GEMINI_MODEL` | optional, Standard `gemini-2.5-flash` |
 
 Ohne `GOOGLE_CLIENT_ID` und `ALLOWED_EMAILS` läuft die App ohne Anmeldung: Schichten von Hand und Kalenderdatei gehen, Foto-Erkennung und Google Kalender sind aus.
@@ -34,7 +34,7 @@ In der Google Cloud Console braucht die Client-ID die Adresse der App als „Aut
 
 ## Datenschutz
 
-- Das Foto geht nur für die Erkennung an Google Gemini und wird von der App nicht gespeichert. Im kostenlosen Tarif darf Google die Inhalte zur Verbesserung seiner Produkte verwenden.
+- Das Foto geht nur für die Erkennung an Google Gemini und wird von der App nicht gespeichert. Die App fragt vor dem ersten Senden je Gerät nach. Im kostenlosen Tarif darf Google die Inhalte zur Verbesserung seiner Produkte verwenden.
 - Schichten, Standardtext und Arbeitsort liegen nur im Browser des Geräts.
 - Im Code stehen keine persönlichen Daten und keine Schlüssel.
 

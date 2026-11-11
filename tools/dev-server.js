@@ -23,9 +23,9 @@ http.createServer(async (req, res) => {
     return;
   }
   let p = path.normalize(path.join(ROOT, "public", decodeURIComponent(url.pathname)));
-  if (!p.startsWith(path.join(ROOT, "public"))) { res.writeHead(403); return res.end(); }
+  if (p !== path.join(ROOT, "public") && !p.startsWith(path.join(ROOT, "public") + path.sep)) { res.writeHead(403); return res.end(); }
   if (fs.existsSync(p) && fs.statSync(p).isDirectory()) p = path.join(p, "index.html");
   if (!fs.existsSync(p)) { res.writeHead(404); return res.end("Nicht gefunden"); }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(p)] || "application/octet-stream", "Cache-Control": "no-store" });
   fs.createReadStream(p).pipe(res);
-}).listen(PORT, () => console.log("Zeitnachweis läuft auf http://localhost:" + PORT));
+}).listen(PORT, "127.0.0.1", () => console.log("Zeitnachweis läuft auf http://localhost:" + PORT));

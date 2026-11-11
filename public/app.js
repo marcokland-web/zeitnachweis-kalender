@@ -34,7 +34,7 @@
     account: ["Konto", "Account"],
     signedInWith: ["Angemeldet mit Google", "Signed in with Google"],
     signOut: ["Abmelden", "Sign out"],
-    signOutAsk: ["Abmelden? Die Schichten in der Liste werden auf diesem Gerät gelöscht.", "Sign out? The shifts in the list will be removed from this device."],
+    signOutAsk: ["Abmelden? Schichten, Standardtext, Arbeitsort und Standardkalender werden auf diesem Gerät gelöscht.", "Sign out? Shifts, default title, workplace and default calendar will be removed from this device."],
     about: ["Über", "About"],
     update: ["Aktualisieren", "Update"],
     version: ["Version {v}", "Version {v}"],
@@ -51,7 +51,8 @@
     pickPhoto: ["Foto auswählen oder aufnehmen", "Choose or take a photo"],
     otherPhoto: ["Anderes Foto wählen", "Choose another photo"],
     detect: ["Schichten erkennen", "Read shifts"],
-    photoHint: ["Ausdruck oder Bildschirm, beides geht. Möglichst gerade und die ganze Tabelle im Bild.", "A printout or a screen both work. Keep it straight with the whole table in view."],
+    photoHint: ["Ausdruck oder Bildschirm, beides geht. Möglichst gerade und die ganze Tabelle im Bild. Zum Erkennen geht das Foto an Google (Gemini).", "A printout or a screen both work. Keep it straight with the whole table in view. For recognition the photo is sent to Google (Gemini)."],
+    sendAsk: ["Das Foto wird zur Erkennung an Google (Gemini) geschickt. Name und Personalnummer sind darauf zu sehen. Einverstanden?", "The photo will be sent to Google (Gemini) for recognition. It shows your name and staff number. Do you agree?"],
     detecting: ["Lese die Arbeitszeiten aus dem Foto. Das dauert meist 10 bis 30 Sekunden.", "Reading the work hours from the photo. This usually takes 10 to 30 seconds."],
     detected: ["{n} erkannt. Vergleiche sie kurz mit dem Zeitnachweis.", "{n} found. Please compare them with your time sheet."],
     detectedUnsure: ["{n} davon schwer lesbar.", "{n} of them hard to read."],
@@ -417,13 +418,17 @@
       var blob = await new Promise(function (res, rej) { c.toBlob(function (b) { b ? res(b) : rej(new Error("blob")); }, "image/jpeg", 0.85); });
       return { mime: "image/jpeg", bild: await blobToBase64(blob) };
     } catch (e) {
-      if (["image/jpeg", "image/png", "image/webp"].indexOf(file.type) < 0) throw { code: "bild" };
-      return { mime: file.type, bild: await blobToBase64(file) };
+      // Nie die Originaldatei schicken: sie kann Aufnahmeort und andere Angaben enthalten
+      throw { code: "bild" };
     }
   }
   var DETECT_ERR = { anmelden: "errLogin", nicht_freigeschaltet: "errDenied", nicht_eingerichtet: "errSetup", zu_gross: "errTooBig", bild: "errImage", limit: "errLimit" };
   $("detect").addEventListener("click", async function () {
     if (state.busy || !state.file || !canDetect()) return;
+    if (store.raw("zn-send-ok", "") !== "1") {
+      if (!window.confirm(t("sendAsk"))) return;
+      store.setRaw("zn-send-ok", "1");
+    }
     state.busy = true; renderSummary();
     setMsg("detect-msg", t("detecting"));
     try {
@@ -525,9 +530,15 @@
   function signOut(silent) {
     if (!silent && !window.confirm(t("signOutAsk"))) return;
     try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
+    if (!silent && state.gTok) { try { google.accounts.oauth2.revoke(state.gTok.token, function () {}); } catch (e) {} }
     state.user = null; state.gTok = null;
     store.del("zn-id");
-    if (!silent) { state.rows = []; store.del("zn-rows"); }
+    if (!silent) {
+      state.rows = []; state.cal = null;
+      ["zn-rows", "zn-cal", "zn-title", "zn-loc", "zn-send-ok"].forEach(store.del);
+      $("def-title").value = "Arbeit dm"; $("def-loc").value = "";
+      $("cal").textContent = ""; renderCalSelect(null);
+    }
     if (settings.open) settings.close();
     if (state.cfg && state.cfg.googleClientId) showGate();
   }
