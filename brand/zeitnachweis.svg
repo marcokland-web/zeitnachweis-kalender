@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg-zeitnachweis" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8C2545"/>
+      <stop offset="1" stop-color="#5A1028"/>
+    </linearGradient>
+    <linearGradient id="gold-zeitnachweis" x1="0" y1="212" x2="0" y2="812" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F0D08A"/>
+      <stop offset="1" stop-color="#C8963E"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#bg-zeitnachweis)"/>
+  <rect x="272" y="300" width="480" height="472" rx="84" ry="84" fill="none" stroke="url(#gold-zeitnachweis)" stroke-linecap="round" stroke-linejoin="round" stroke-width="64"/>
+  <line x1="400" y1="232" x2="400" y2="340" fill="none" stroke="url(#gold-zeitnachweis)" stroke-linecap="round" stroke-linejoin="round" stroke-width="64"/>
+  <line x1="624" y1="232" x2="624" y2="340" fill="none" stroke="url(#gold-zeitnachweis)" stroke-linecap="round" stroke-linejoin="round" stroke-width="64"/>
+  <polyline points="512,470 512,588 604,588" fill="none" stroke="url(#gold-zeitnachweis)" stroke-linecap="round" stroke-linejoin="round" stroke-width="64"/>
+</svg>

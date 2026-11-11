@@ -1,0 +1,11 @@
+{
+  "name": "zeitnachweis-kalender",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Web-App: Foto vom Zeitnachweis wird zu Kalendereinträgen",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "node tools/dev-server.js"
+  }
+}

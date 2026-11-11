@@ -1,0 +1,19 @@
+{
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "name": "Zeitnachweis",
+  "short_name": "Zeitnachweis",
+  "description": "Arbeitszeiten vom Zeitnachweis in den Kalender",
+  "lang": "de",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#5A1028",
+  "background_color": "#FAF7F2",
+  "icons": [
+    { "src": "icons/icon-192.png?v=1", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png?v=1", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg?v=1", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

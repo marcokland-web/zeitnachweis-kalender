@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zeitnachweis</title>
+<meta name="description" content="Aus einem Foto vom Zeitnachweis werden Kalendereinträge.">
+<meta name="theme-color" content="#FAF7F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141012" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Zeitnachweis">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest?v=1">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png?v=1">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg?v=1">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=1">
+<script src="early.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top glass">
+  <img class="top-icon" src="icons/icon.svg?v=1" alt="" width="32" height="32">
+  <h1 data-t="appName">Zeitnachweis</h1>
+  <button class="iconbtn glass" id="gear" type="button" aria-label="Einstellungen">
+    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.6 7.6 0 0 0-2.6 1.5l-2.3-.9-2 3.4 2 1.5a7.6 7.6 0 0 0 0 3l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.6 7.6 0 0 0 2.6-1.5l2.3.9 2-3.4z"/></svg>
+  </button>
+</header>
+
+<section class="gate" id="gate" hidden>
+  <div class="card gate-card">
+    <img src="icons/icon.svg?v=1" alt="" width="72" height="72">
+    <h2 data-t="gateTitle">Anmelden</h2>
+    <p data-t="gateText">Melde dich mit deinem Google-Konto an. Nur freigeschaltete Konten kommen hinein.</p>
+    <div id="gbtn" class="gbtn"></div>
+    <p class="msg" id="gate-msg" role="status"></p>
+  </div>
+</section>
+
+<main class="page" id="app" hidden>
+  <p class="msg info" id="setup-note" hidden></p>
+
+  <section class="card" id="c-foto" aria-labelledby="h-foto">
+    <h2 id="h-foto" data-t="photoTitle">Foto</h2>
+    <div class="photo">
+      <button class="thumb" id="thumb-btn" type="button" hidden>
+        <img id="thumb" alt="">
+        <span data-t="zoom">Vergrößern</span>
+      </button>
+      <div class="photo-actions">
+        <label class="btn tinted filebtn" for="photo">
+          <span id="photo-label" data-t="pickPhoto">Foto auswählen oder aufnehmen</span>
+          <input type="file" id="photo" accept="image/*">
+        </label>
+        <button class="btn" id="detect" type="button" disabled data-t="detect">Schichten erkennen</button>
+      </div>
+    </div>
+    <p class="hint" id="photo-hint" data-t="photoHint">Ausdruck oder Bildschirm, beides geht. Möglichst gerade und die ganze Tabelle im Bild.</p>
+    <p class="msg" id="detect-msg" role="status"></p>
+  </section>
+
+  <section class="card" id="c-schichten" aria-labelledby="h-schichten">
+    <h2 id="h-schichten" data-t="shiftsTitle">Schichten</h2>
+    <p class="summary" id="summary"></p>
+    <div class="rows" id="rows"></div>
+    <button class="btn plain" id="add-row" type="button" data-t="addRow">Schicht von Hand hinzufügen</button>
+  </section>
+
+  <section class="card" id="c-eintragen" aria-labelledby="h-eintragen">
+    <h2 id="h-eintragen" data-t="exportTitle">Eintragen</h2>
+    <p class="defaults" id="defaults"></p>
+    <div class="seg" role="radiogroup" id="target" aria-labelledby="h-eintragen">
+      <label><input type="radio" name="target" value="ics"><span data-t="targetIcs">Apple Kalender</span></label>
+      <label><input type="radio" name="target" value="google"><span data-t="targetGoogle">Google Kalender</span></label>
+    </div>
+    <p class="hint" id="target-hint"></p>
+    <div class="calrow" id="calrow" hidden>
+      <label for="cal" data-t="defaultCal">Standardkalender</label>
+      <select id="cal"></select>
+      <button class="btn tinted" id="load-cals" type="button" data-t="loadCals">Kalender laden</button>
+    </div>
+    <button class="btn" id="go" type="button" disabled></button>
+    <p class="msg" id="go-msg" role="status"></p>
+  </section>
+</main>
+
+<dialog class="settings" id="settings" aria-labelledby="st-title">
+  <div class="st-grip" aria-hidden="true"></div>
+  <div class="st-head">
+    <h2 id="st-title" data-t="settings">Einstellungen</h2>
+    <button class="btn plain" id="st-done" type="button" data-t="done">Fertig</button>
+  </div>
+
+  <h3 data-t="appearance">Darstellung</h3>
+  <div class="st-group">
+    <div class="seg" role="radiogroup" id="theme" aria-label="Darstellung">
+      <label><input type="radio" name="theme" value="auto"><span data-t="themeAuto">Automatisch</span></label>
+      <label><input type="radio" name="theme" value="light"><span data-t="themeLight">Hell</span></label>
+      <label><input type="radio" name="theme" value="dark"><span data-t="themeDark">Dunkel</span></label>
+    </div>
+  </div>
+
+  <h3 data-t="language">Sprache</h3>
+  <div class="st-group">
+    <div class="seg" role="radiogroup" id="lang" aria-label="Sprache">
+      <label><input type="radio" name="lang" value="de"><span>Deutsch</span></label>
+      <label><input type="radio" name="lang" value="en"><span>English</span></label>
+    </div>
+  </div>
+
+  <h3 data-t="events">Termine</h3>
+  <div class="st-group">
+    <div class="st-row"><label for="def-title" data-t="defTitle">Standardtext</label><input type="text" id="def-title" autocomplete="off" maxlength="80"></div>
+    <div class="st-row"><label for="def-loc" data-t="defLoc">Arbeitsort</label><input type="text" id="def-loc" autocomplete="off" maxlength="120"></div>
+  </div>
+  <p class="st-foot" data-t="defFoot">Gilt für alle Schichten, bei denen du Titel oder Ort nicht einzeln überschrieben hast. Lernzeit heißt im Kalender „Lernzeit“.</p>
+
+  <div id="st-account" hidden>
+    <h3 data-t="account">Konto</h3>
+    <div class="st-group">
+      <div class="st-row"><span data-t="signedInWith">Angemeldet mit Google</span><span class="st-value" id="st-email"></span></div>
+      <div class="st-row"><button class="btn plain danger" id="signout" type="button" data-t="signOut">Abmelden</button></div>
+    </div>
+  </div>
+
+  <h3 data-t="about">Über</h3>
+  <div class="st-group">
+    <div class="st-about">
+      <img src="icons/icon.svg?v=1" alt="" width="52" height="52">
+      <div>
+        <strong data-t="appName">Zeitnachweis</strong>
+        <span data-t="appLong">Arbeitszeiten vom Zeitnachweis in den Kalender</span>
+        <span id="st-build"></span>
+        <span data-t="studio">Teil des Familien-App-Studios</span>
+      </div>
+    </div>
+    <div class="st-row"><button class="btn plain" id="st-update" type="button" data-t="update">Aktualisieren</button></div>
+  </div>
+</dialog>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="Foto">
+  <div class="viewer-scroll" id="viewer-scroll"><img id="viewer-img" alt="" draggable="false"></div>
+  <div class="viewer-bar">
+    <button class="btn tinted" id="zoom-out" type="button" aria-label="Kleiner">−</button>
+    <span class="zoomval" id="zoom-val">100 %</span>
+    <button class="btn tinted" id="zoom-in" type="button" aria-label="Größer">+</button>
+    <span class="spacer"></span>
+    <button class="btn tinted" id="viewer-close" type="button" data-t="close">Schließen</button>
+  </div>
+</div>
+
+<div class="toast glass" id="toast" hidden role="status">
+  <span id="toast-text"></span>
+  <button class="btn plain" id="toast-undo" type="button" data-t="undo">Rückgängig</button>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
