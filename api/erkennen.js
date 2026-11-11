@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
   if (!MIME.includes(mime) || !bild || !/^[A-Za-z0-9+/]+=*$/.test(bild.slice(0, 2000))) return res.status(400).json({ fehler: "bild" });
   if (bild.length > MAX_B64) return res.status(413).json({ fehler: "zu_gross" });
 
-  // Google nimmt Modelle regelmäßig aus dem Angebot: gibt es eins nicht mehr (404), wird das nächste versucht
+  // Gibt es ein Modell nicht mehr (404), ist es überlastet (500, 503) oder sein Kontingent leer (429), wird das nächste versucht
   const models = [process.env.GEMINI_MODEL, ...MODELS].filter((m, i, all) => m && all.indexOf(m) === i);
   const payload = JSON.stringify({
     contents: [{ role: "user", parts: [{ inline_data: { mime_type: mime, data: bild } }, { text: PROMPT }] }],
@@ -70,9 +70,10 @@ module.exports = async function handler(req, res) {
     } catch (e) {
       return res.status(502).json({ fehler: "dienst" });
     }
-    if (r.status !== 404) break;
-    console.error("Gemini-Modell nicht verfügbar:", model);
+    if (![404, 429, 500, 503].includes(r.status)) break;
+    console.error("Gemini-Modell", model, "antwortet mit Status", r.status);
   }
+  if (r.status === 503 || r.status === 500) return res.status(503).json({ fehler: "ueberlastet" });
   if (r.status === 429) return res.status(429).json({ fehler: "limit" });
   if (!r.ok) {
     // Nur den Status festhalten, nie Schlüssel oder Bildinhalt

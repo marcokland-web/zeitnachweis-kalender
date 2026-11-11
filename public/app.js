@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var BUILD = "2026-11-11.2";
+  var BUILD = "2026-11-11.3";
   var SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"];
   var $ = function (id) { return document.getElementById(id); };
 
@@ -65,6 +65,7 @@
     errTooBig: ["Das Foto ist zu groß. Nimm bitte ein kleineres.", "The photo is too large. Please use a smaller one."],
     errImage: ["Das Foto konnte nicht gelesen werden. Nimm bitte ein JPG oder PNG.", "The photo could not be read. Please use a JPG or PNG."],
     errLimit: ["Das kostenlose Kontingent ist gerade ausgeschöpft. Versuch es in ein paar Minuten noch einmal.", "The free quota is used up right now. Try again in a few minutes."],
+    errBusy: ["Google ist gerade überlastet. Das liegt nicht an deinem Foto. Versuch es in ein, zwei Minuten noch einmal.", "Google is overloaded right now. Your photo is fine. Try again in a minute or two."],
     errService: ["Die Erkennung hat nicht geantwortet. Tippe noch einmal auf „Schichten erkennen“.", "Recognition did not answer. Tap “Read shifts” again."],
     errOffline: ["Keine Verbindung. Prüfe dein Netz und versuch es noch einmal.", "No connection. Check your network and try again."],
     shiftsTitle: ["Schichten", "Shifts"],
@@ -446,7 +447,7 @@
       throw { code: "bild" };
     }
   }
-  var DETECT_ERR = { anmelden: "errLogin", nicht_freigeschaltet: "errDenied", nicht_eingerichtet: "errSetup", zu_gross: "errTooBig", bild: "errImage", limit: "errLimit" };
+  var DETECT_ERR = { anmelden: "errLogin", nicht_freigeschaltet: "errDenied", nicht_eingerichtet: "errSetup", zu_gross: "errTooBig", bild: "errImage", limit: "errLimit", ueberlastet: "errBusy" };
   $("detect").addEventListener("click", async function () {
     if (state.busy || !state.file || !canDetect()) return;
     if (store.raw("zn-send-ok", "") !== "1") {
