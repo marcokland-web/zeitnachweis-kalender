@@ -73,7 +73,7 @@ module.exports = async function handler(req, res) {
   }
   let data;
   try { data = await r.json(); } catch (e) { return res.status(502).json({ fehler: "dienst" }); }
-  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+  const parts = ((((data || {}).candidates || [])[0] || {}).content || {}).parts || [];
   const text = parts.map((p) => (p && typeof p.text === "string" ? p.text : "")).join("");
   const parsed = parseJson(text);
   if (!parsed) return res.status(502).json({ fehler: "antwort" });

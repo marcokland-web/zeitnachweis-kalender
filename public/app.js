@@ -45,7 +45,7 @@
     gateNoScript: ["Die Google-Anmeldung lässt sich nicht laden. Prüfe deine Verbindung und lade die Seite neu.", "Google sign-in could not be loaded. Check your connection and reload the page."],
     setupLogin: ["Die Google-Anmeldung ist noch nicht eingerichtet. Bis dahin sind Foto-Erkennung und Google Kalender aus. Schichten von Hand eintragen und als Kalenderdatei öffnen geht schon.", "Google sign-in is not set up yet. Until then photo recognition and Google Calendar are off. Adding shifts by hand and opening them as a calendar file already works."],
     setupKey: ["Die Foto-Erkennung ist noch nicht eingerichtet (der Gemini-Schlüssel fehlt). Schichten von Hand eintragen geht schon.", "Photo recognition is not set up yet (the Gemini key is missing). Adding shifts by hand already works."],
-    setupOffline: ["Der Server ist gerade nicht erreichbar. Foto-Erkennung und Google Kalender gehen erst wieder mit Verbindung.", "The server cannot be reached right now. Photo recognition and Google Calendar need a connection."],
+    setupOffline: ["Der Server ist gerade nicht erreichbar. Foto-Erkennung, Kalenderdatei und Google Kalender gehen erst wieder mit Verbindung.", "The server cannot be reached right now. Photo recognition, the calendar file and Google Calendar need a connection."],
     photoTitle: ["Foto", "Photo"],
     zoom: ["Vergrößern", "Enlarge"],
     smaller: ["Kleiner", "Smaller"],
@@ -80,6 +80,7 @@
     place: ["Ort", "Place"],
     deleteShift: ["Schicht löschen", "Delete shift"],
     deleted: ["Schicht gelöscht", "Shift deleted"],
+    replaced: ["Liste ersetzt", "List replaced"],
     tagUnsure: ["schwer lesbar, bitte prüfen", "hard to read, please check"],
     tagInvalid: ["Datum oder Zeit fehlt", "date or time missing"],
     tagDone: ["eingetragen", "added"],
@@ -105,13 +106,13 @@
     icsTooMany: ["Das sind zu viele Schichten für eine Datei. Wähle weniger aus und öffne zwei Dateien.", "These are too many shifts for one file. Select fewer and open two files."],
     gWriting: ["Trage ein: {i} von {n}", "Adding {i} of {n}"],
     gDone: ["{n} in „{cal}“ eingetragen.", "{n} added to “{cal}”."],
-    gSkipped: ["{n} waren schon drin.", "{n} were already there."],
+    nSkipped: ["1 war schon drin.|{n} waren schon drin.", "1 was already there.|{n} were already there."],
+    gExpired: ["Die Google-Freigabe ist abgelaufen. Tippe noch einmal.", "The Google permission has expired. Tap again."],
     gDenied: ["Ohne deine Freigabe für Google Kalender kann nichts eingetragen werden.", "Nothing can be added without your permission for Google Calendar."],
     gPopup: ["Das Google-Fenster wurde geschlossen oder blockiert. Tippe noch einmal.", "The Google window was closed or blocked. Tap again."],
     gForbidden: ["In diesen Kalender darfst du nicht schreiben. Wähle einen anderen.", "You may not write to this calendar. Choose another one."],
     gUnclear: ["Bei einer Schicht kam keine Antwort. Schau im Kalender nach, ob sie drinsteht, bevor du es noch einmal versuchst.", "One shift got no answer. Check your calendar before you try again."],
     gFailed: ["Google Kalender hat die Anfrage abgelehnt.", "Google Calendar rejected the request."],
-    nShift: ["1 Schicht|{n} Schichten", "1 shift|{n} shifts"],
     nEvent: ["1 Termin|{n} Termine", "1 event|{n} events"],
     nRow: ["1 Zeile|{n} Zeilen", "1 row|{n} rows"]
   };
@@ -166,7 +167,9 @@
   }
   function parseDate(date) {
     var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date || "");
-    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+    if (!m) return null;
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? d : null;
   }
   function dayLabel(date) {
     var d = parseDate(date);
@@ -262,28 +265,36 @@
   function renderAll() { renderRows(); renderSummary(); }
 
   // Löschen mit Rückgängig
-  var toastTimer = null, lastDeleted = null;
+  var toastTimer = null, undoFn = null;
+  function hideToast() { clearTimeout(toastTimer); $("toast").hidden = true; undoFn = null; }
+  function showToast(text, undo, ms) {
+    $("toast-text").textContent = text;
+    $("toast").hidden = false;
+    undoFn = undo;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, ms || 6000);
+  }
   function removeRow(r) {
     var i = state.rows.indexOf(r);
     if (i < 0) return;
     state.rows.splice(i, 1);
-    lastDeleted = { row: r, index: i };
     saveRows(); renderAll();
-    $("toast-text").textContent = t("deleted");
-    $("toast").hidden = false;
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { $("toast").hidden = true; lastDeleted = null; }, 6000);
+    showToast(t("deleted"), function () { state.rows.splice(Math.min(i, state.rows.length), 0, r); });
   }
   $("toast-undo").addEventListener("click", function () {
-    if (lastDeleted) { state.rows.splice(Math.min(lastDeleted.index, state.rows.length), 0, lastDeleted.row); lastDeleted = null; saveRows(); renderAll(); }
-    clearTimeout(toastTimer);
-    $("toast").hidden = true;
+    var fn = undoFn;
+    hideToast();
+    if (fn) { fn(); saveRows(); renderAll(); }
   });
   $("add-row").addEventListener("click", function () {
     var last = state.rows[state.rows.length - 1];
     var today = new Date();
     var iso = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
-    state.rows.push(mkRow(last && parseDate(last.date) ? last.date : iso, "08:00", "12:00", "", false));
+    var date = last && parseDate(last.date) ? last.date : iso;
+    // Keine zweite Zeile mit gleichem Tag und gleicher Zeit: sie hätte im Kalender dieselbe Kennung
+    while (state.rows.some(function (r) { return r.date === date && r.von === "08:00" && r.bis === "12:00"; }))
+      date = new Date(parseDate(date).getTime() + 86400000).toISOString().slice(0, 10);
+    state.rows.push(mkRow(date, "08:00", "12:00", "", false));
     saveRows(); renderAll();
   });
 
@@ -319,7 +330,7 @@
     });
   }
   radios("theme", store.raw("studio-theme", "auto"), function (v) { store.setRaw("studio-theme", v); applyTheme(v); });
-  radios("lang", lang, function (v) { lang = v === "en" ? "en" : "de"; store.setRaw("studio-lang", lang); applyTexts(); renderAll(); if (!$("gate").hidden) renderGoogleButton(); });
+  radios("lang", lang, function (v) { lang = v === "en" ? "en" : "de"; store.setRaw("studio-lang", lang); ["detect-msg", "go-msg", "gate-msg"].forEach(function (id) { setMsg(id, ""); }); hideToast(); applyTexts(); renderAll(); if (!$("gate").hidden) renderGoogleButton(); });
   radios("target", state.target, function (v) { state.target = v; store.setRaw("zn-target", v); setMsg("go-msg", ""); renderTarget(); });
 
   $("def-title").value = store.raw("zn-title", "Arbeit dm");
@@ -452,19 +463,21 @@
       } catch (e) { throw { code: "offline" }; }
       var data = null;
       try { data = await r.json(); } catch (e) {}
-      if (!r.ok) throw { code: (data && data.fehler) || "dienst" };
-      var list = data && Array.isArray(data.eintraege) ? data.eintraege : [];
+      if (!r.ok) throw { code: (data && data.fehler) || (r.status === 413 ? "zu_gross" : "dienst") };
+      var list = (data && Array.isArray(data.eintraege) ? data.eintraege : []).filter(function (e) { return e && typeof e === "object"; });
       var rows = list.map(function (e) { return mkRow(String(e.datum), String(e.von), String(e.bis), String(e.art || ""), e.unsicher === true); }).filter(validRow);
       if (!rows.length) setMsg("detect-msg", t("detectedNone"), "warn");
       else {
+        var old = state.rows;
         state.rows = rows; saveRows();
+        if (old.length) showToast(t("replaced"), function () { state.rows = old; }, 12000);
         var unsure = rows.filter(function (x) { return x.unsicher; }).length;
         setMsg("detect-msg", t("detected", { n: count("nRow", rows.length) }) + (unsure ? " " + t("detectedUnsure", { n: unsure }) : ""), unsure ? "warn" : "good");
       }
     } catch (e) {
       var code = e && e.code;
       setMsg("detect-msg", code === "offline" ? t("errOffline") : t(DETECT_ERR[code] || "errService"), "bad");
-      if (code === "anmelden") signOut(true);
+      if (code === "anmelden") { signOut(true); setMsg("detect-msg", ""); setMsg("gate-msg", t("errLogin"), "warn"); }
     } finally { state.busy = false; renderAll(); }
   });
 
@@ -481,8 +494,9 @@
     return "/api/ics?d=" + b64url(JSON.stringify({ s: strings, e: events }));
   }
   function openIcs(rows) {
+    if (state.cfgFailed || navigator.onLine === false) { setMsg("go-msg", t("errOffline"), "bad"); return; }
     var url = icsUrl(rows);
-    if (url.length > 7000 || rows.length > 120) { setMsg("go-msg", t("icsTooMany"), "warn"); return; }
+    if (url.length > 11500 || rows.length > 120) { setMsg("go-msg", t("icsTooMany"), "warn"); return; }
     var w = null;
     try { w = window.open(url, "_blank"); } catch (e) {}
     if (!w) location.href = url;
@@ -563,6 +577,8 @@
     return new Promise(function (res, rej) {
       if (state.gTok && state.gTok.exp > Date.now() + 60000) return res(state.gTok.token);
       if (!window.google || !google.accounts || !google.accounts.oauth2) return rej({ code: "popup" });
+      // Antwortet das Google-Fenster nie, bleibt die App nicht gesperrt
+      setTimeout(function () { rej({ code: "popup" }); }, 120000);
       var client = google.accounts.oauth2.initTokenClient({
         client_id: state.cfg.googleClientId, scope: SCOPES.join(" "), hint: state.user.email,
         callback: function (r) {
@@ -586,13 +602,13 @@
         body: body ? JSON.stringify(body) : undefined
       });
     } catch (e) { throw { code: "unclear" }; }
-    if (r.status === 401) { state.gTok = null; throw { code: "denied" }; }
+    if (r.status === 401) { state.gTok = null; throw { code: "expired" }; }
     var data = null;
     try { data = await r.json(); } catch (e) {}
     if (!r.ok) throw { code: r.status === 403 || r.status === 404 ? "forbidden" : r.status === 409 ? "conflict" : r.status >= 500 ? "unclear" : "failed" };
     return data;
   }
-  function gErr(e) { return t({ denied: "gDenied", popup: "gPopup", forbidden: "gForbidden", unclear: "gUnclear" }[e && e.code] || "gFailed"); }
+  function gErr(e) { return t({ denied: "gDenied", popup: "gPopup", expired: "gExpired", forbidden: "gForbidden", unclear: "gUnclear" }[e && e.code] || "gFailed"); }
 
   function renderCalSelect(list) {
     var sel = $("cal");
@@ -628,6 +644,7 @@
   async function writeGoogle(rows) {
     if (!state.cal) { setMsg("go-msg", t("calFirst"), "warn"); return; }
     try { await googleToken(); } catch (e) { setMsg("go-msg", gErr(e), "bad"); return; }
+    state.rows.forEach(function (r) { r.status = ""; r.kind = ""; });
     var base = "/calendars/" + encodeURIComponent(state.cal.id) + "/events";
     var ok = 0, skipped = 0, stopped = "";
     for (var i = 0; i < rows.length; i++) {
@@ -654,7 +671,7 @@
       }
     }
     renderRows();
-    var done = t("gDone", { n: count("nEvent", ok), cal: state.cal.name }) + (skipped ? " " + t("gSkipped", { n: skipped }) : "");
+    var done = [ok || !skipped ? t("gDone", { n: count("nEvent", ok), cal: state.cal.name }) : "", skipped ? count("nSkipped", skipped) : ""].filter(Boolean).join(" ");
     setMsg("go-msg", stopped ? ((ok || skipped) ? done + " " : "") + stopped : done, stopped ? "bad" : "good");
   }
 
@@ -683,7 +700,7 @@
       if (i.value === "google") i.disabled = !canGoogle;
       i.checked = i.value === (g ? "google" : "ics");
     });
-    if (state.target === "google" && !canGoogle) state.target = "ics";
+    if (state.cfg && state.target === "google" && !canGoogle) state.target = "ics";
     $("calrow").hidden = !g;
     $("target-hint").textContent = g ? t("hintGoogle") : t("hintIcs") + (canGoogle ? "" : " " + t("hintGoogleOff"));
     renderSummary();

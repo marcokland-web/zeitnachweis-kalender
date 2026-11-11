@@ -39,6 +39,7 @@ test("Übergabe: Unsinn wird abgelehnt", () => {
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [] })));
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-02-30", "08:00", "12:00", 0, null]] })));
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "25:00", "12:00", 0, null]] })));
+  assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "08:00", "08:00", 0, null]] })));
   assert.throws(() => decodePayload(b64({ s: ["A\r\nBEGIN:VEVENT"], e: [["2026-12-01", "08:00", "12:00", 5, null]] })));
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "08:00", "12:00", "constructor", null]] })));
   assert.throws(() => decodePayload(b64({ s: ["A"], e: [["2026-12-01", "08:00", "12:00", 0, 7]] })));
