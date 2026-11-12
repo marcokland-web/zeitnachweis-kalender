@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  var BUILD = "2026-11-11.3";
+  var BUILD = "2026-11-12.1";
   var SCOPES = ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.calendarlist.readonly"];
   var $ = function (id) { return document.getElementById(id); };
 
@@ -104,6 +104,7 @@
     goIcs: ["{n} als Kalenderdatei öffnen", "Open {n} as calendar file"],
     goGoogle: ["{n} in Google Kalender eintragen", "Add {n} to Google Calendar"],
     icsOpened: ["Kalenderdatei geöffnet. Tippe dort auf „Alle hinzufügen“.", "Calendar file opened. Tap “Add All” there."],
+    icsOpenedApp: ["Kalenderdatei geöffnet. Erscheint kein Dialog zum Hinzufügen, öffne die Seite einmal in Safari und tippe dort noch einmal.", "Calendar file opened. If no dialog to add the events appears, open the page in Safari once and tap again there."],
     icsTooMany: ["Das sind zu viele Schichten für eine Datei. Wähle weniger aus und öffne zwei Dateien.", "These are too many shifts for one file. Select fewer and open two files."],
     gWriting: ["Trage ein: {i} von {n}", "Adding {i} of {n}"],
     gDone: ["{n} in „{cal}“ eingetragen.", "{n} added to “{cal}”."],
@@ -494,14 +495,16 @@
     var events = rows.map(function (r) { var loc = locOf(r); return [r.date, r.von, r.bis, idx(titleOf(r)), loc ? idx(loc) : null]; });
     return "/api/ics?d=" + b64url(JSON.stringify({ s: strings, e: events }));
   }
+  function standalone() {
+    return navigator.standalone === true || (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  }
   function openIcs(rows) {
     if (state.cfgFailed || navigator.onLine === false) { setMsg("go-msg", t("errOffline"), "bad"); return; }
     var url = icsUrl(rows);
     if (url.length > 11500 || rows.length > 120) { setMsg("go-msg", t("icsTooMany"), "warn"); return; }
-    var w = null;
-    try { w = window.open(url, "_blank"); } catch (e) {}
-    if (!w) location.href = url;
-    setMsg("go-msg", t("icsOpened"), "good");
+    // Im selben Fenster öffnen: In einem neuen, leeren Tab zeigt das iPhone den Kalender-Dialog nicht an
+    setMsg("go-msg", t(standalone() ? "icsOpenedApp" : "icsOpened"), "good");
+    location.href = url;
   }
 
   // ---------- Google: Anmeldung ----------
